@@ -8,3 +8,4 @@ dbt_packages/
 .dagster_home/
 data/raw/
 .user.yml
+warehouse/
