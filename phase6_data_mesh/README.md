@@ -1,191 +1,170 @@
 # Phase 6: Data Mesh
 
-## 1. Nói đơn giản trước
+## Tóm tắt trong 1 câu
 
-Phase 1–4 xây **một warehouse trung tâm**, do **một team data** làm hết cho mọi bộ phận. Hồi ở phase 0
-ta đã thấy vấn đề: cái bẫy `customer_id` chỉ người hiểu nghiệp vụ bán hàng mới biết. Công ty có 30 bộ phận
-thì team data trung tâm thành **nút cổ chai** và **hiểu sai nghiệp vụ**.
+**Mỗi domain là một "phase 3 thu nhỏ" (EL → raw → staging → output) chạy trên warehouse riêng. Domain này
+chỉ được đọc output của domain kia, và platform cung cấp đồ nghề cũng như kiểm tra luật cho tất cả.**
 
-**Data Mesh** (Zhamak Dehghani, 2019) đề xuất: **giao data về cho chính bộ phận hiểu nó nhất**. Mỗi bộ phận
-(gọi là **domain**) tự làm pipeline của mình và **xuất bản** kết quả thành một **data product** có "giao kèo"
-rõ ràng, để bộ phận khác dùng.
+```
+                    ┌────────── PLATFORM (đồ nghề dùng chung) ──────────┐
+                    │ ingest.py · macro dbt · luật (policies) · catalog  │
+                    └────────────────────────────────────────────────────┘
+                            │ domain tự dùng            │ kiểm tra tất cả
+                            ▼                           ▼
+Postgres ──EL (ingest.py)──▶ sales.duckdb
+(nguồn)                     raw ─dbt─▶ staging ─dbt─▶ output.orders_v1 ──┐
+   │                                                      (data product) │ đọc read-only
+   │                                                                     ▼
+   └──EL (ingest.py)──▶ logistics.duckdb
+                        raw ─dbt─▶ staging ─dbt─▶ output.delivery_performance_v1
+                                                                     │
+                                       exec_report.py (consumer) ◀───┘ đọc output của cả 2
+```
 
-Với dân SE, phép so sánh dễ nhất là **monolith → microservices**:
+## Vì sao cần Data Mesh?
 
-| Software Engineering | Data Mesh | Trong project |
+Phase 1–4 có **một warehouse trung tâm, một team data làm cho mọi bộ phận**. Công ty nhỏ thì ổn. Công ty có
+30 bộ phận thì team data thành **nút cổ chai**, lại **hiểu sai nghiệp vụ** (nhớ cái bẫy `customer_id` ở phase 0:
+chỉ người làm bán hàng mới biết).
+
+Data Mesh: **giao data về cho bộ phận hiểu nó nhất**. Dân SE cứ nghĩ là **monolith → microservices**:
+
+| Microservices | Data Mesh | Trong project |
 |---|---|---|
-| Monolith | Warehouse trung tâm | Phase 1–4 |
-| Microservice | **Domain** | `domains/sales`, `domains/logistics` |
-| DB riêng của service | Warehouse riêng của domain | `sales.duckdb`, `logistics.duckdb` |
-| **Public API** | **Output port** (data product) | `output.orders_v1` |
-| Private code bên trong | Bảng nội bộ (raw, staging) | `staging.stg_sales__*` |
-| **OpenAPI spec** | **Data contract** | `data_product.yml` |
-| API versioning `/v1`, `/v2` | Version data product | `orders_v1` → `orders_v2` |
-| Platform team (K8s, CI/CD) | **Self-serve data platform** | `platform/` |
-| Linter / CI rule chung | **Federated governance** | `platform/validate_contracts.py` |
-| Service registry | **Data catalog** | `platform/catalog.py` |
+| Service | **Domain** | `domains/sales`, `domains/logistics` |
+| Code private bên trong | Bảng nội bộ | `raw.*`, `staging.*` |
+| Public API | **Data product** (output port) | `output.orders_v1` |
+| OpenAPI spec | **Data contract** | `data_product.yml` |
+| Team DevOps (K8s, CI) | **Platform** | `platform/` |
 
-> ⚠️ Data Mesh là cách **tổ chức con người và trách nhiệm**, không phải một tool. Tool (dbt, DuckDB,
-> Dagster) giữ nguyên như phase 3–4; chỉ có **ai sở hữu cái gì** và **giao tiếp qua đâu** là thay đổi.
+Data Mesh là cách **chia trách nhiệm giữa người với người**, không phải tool mới. Bên trong mỗi domain vẫn là
+dbt, DuckDB như phase 3.
 
-## 2. Bốn nguyên tắc và chỗ thể hiện trong code
+## Hỏi đáp: những chỗ dễ rối
 
-| # | Nguyên tắc | Ý nghĩa | Ở đâu |
-|---|---|---|---|
-| 1 | **Domain ownership** | Domain tự sở hữu data của mình, từ ingest đến xuất bản | Mỗi domain có `ingest.yml` (chỉ lấy cột mình sở hữu), dbt project riêng, warehouse riêng |
-| 2 | **Data as a product** | Data xuất bản phải "dùng được như một sản phẩm": có owner, mô tả, schema cố định, SLA, version | `data_product.yml` + dbt **model contract** (`contract: enforced: true`) |
-| 3 | **Self-serve platform** | Platform team làm công cụ chung, để domain không phải tự xây hạ tầng | `platform/ingest.py`, package dbt `dbt_platform` (macro `published_at`, `normalize_city`) |
-| 4 | **Federated computational governance** | Luật chung do các domain thống nhất, kiểm tra **tự động bằng code** | `platform/policies.yml` + `validate_contracts.py` |
+### 1. Đây là mô phỏng à? Ngoài đời thư mục domain đâu có nằm chung?
 
-## 3. Kiến trúc
+**Đúng, đây là demo.** Mình gom vào một thư mục cho bạn chạy được trên một máy. Ngoài đời:
 
+| Trong demo | Ngoài đời |
+|---|---|
+| `domains/sales/` | **Repo riêng** của team Sales, team đó tự sửa và tự deploy |
+| `domains/logistics/` | **Repo riêng** của team Logistics |
+| `platform/` | **Repo riêng** của team Platform |
+| `run_mesh.py` chạy tuần tự | Mỗi team **tự lập lịch** (ví dụ mỗi team một Dagster như phase 4): Sales 02:00, Logistics 03:00 |
+
+Ý hay bị hiểu nhầm: **Data Mesh tách về quyền sở hữu, không bắt buộc tách về máy móc.** Nhiều công ty vẫn dùng
+chung **một** Snowflake/BigQuery, mỗi domain có database riêng và quyền truy cập riêng. Quan trọng là **ai chịu
+trách nhiệm cho data**, chứ không phải data nằm trên máy nào.
+
+### 2. Luồng dbt là raw → staging → output? Raw nằm ở đâu?
+
+Đúng luồng đó:
 ```
-                         Postgres (hệ thống vận hành)
-                       ┌────────────┴─────────────┐
-           ingest.yml: │ chỉ cột bán hàng          │ chỉ cột giao hàng
-                       ▼                           ▼
- ┌──────────── DOMAIN SALES ────────────┐   ┌────────── DOMAIN LOGISTICS ──────────┐
- │ owner: Sales Analytics               │   │ owner: Logistics & Fulfillment       │
- │ warehouse/mesh/sales.duckdb          │   │ warehouse/mesh/logistics.duckdb      │
- │                                      │   │                                      │
- │  raw.*  →  staging.* (nội bộ)        │   │  raw.*  →  staging.* (nội bộ)        │
- │                 │                    │   │                 │                    │
- │                 ▼                    │   │                 ▼                    │
- │  ╔═ output.orders_v1 ═══════════╗    │   │  ╔═ output.delivery_performance_v1 ═╗│
- │  ║ DATA PRODUCT  sales.orders   ║────┼──▶│  ║ DATA PRODUCT                     ║│
- │  ║ contract · SLA 24h · v1      ║ đọc│   │  ║ logistics.delivery_performance   ║│
- │  ╚══════════════════════════════╝ qua│   │  ╚══════════════════════════════════╝│
- └──────────────────│─────────────── port┘   └──────────────────│───────────────────┘
-                    │      (read-only, chỉ schema output)       │
-                    └──────────────────┬────────────────────────┘
-                                       ▼
-                         CONSUMER: consumers/exec_report.py
-                         (JOIN 2 data product, không cần warehouse trung tâm)
-
- ┌────────────────────────────── PLATFORM (dùng chung) ──────────────────────────────┐
- │ ingest.py · dbt_platform (macros) · policies.yml · validate_contracts.py · catalog │
- └─────────────────────────────────────────────────────────────────────────────────────┘
+raw  ──(dbt)──▶  staging  ──(dbt)──▶  output
+data thô         làm sạch,            data product
+copy từ nguồn    đổi tên, ép kiểu     công khai cho domain khác dùng
 ```
 
-**Logistics cần biết khách ở bang nào và chấm mấy sao**, nhưng đó là data của Sales. Logistics **không**
-tự ingest bảng customers hay reviews, mà dùng data product `sales.orders` của Sales, chỉ qua output port.
+**Raw nằm trong file warehouse của chính domain đó**, schema `raw`:
+- Sales: `warehouse/mesh/sales.duckdb` → `raw.orders`, `raw.customers`, ...
+- Logistics: `warehouse/mesh/logistics.duckdb` → `raw.orders`, `raw.sellers`, ...
 
-> Olist là một DB nguyên khối nên cả hai domain cùng ingest từ một Postgres, mỗi bên chỉ lấy cột mình sở hữu.
-> Ở công ty thật, mỗi domain có hệ thống vận hành riêng (app bán hàng, hệ thống vận chuyển).
+dbt **không tạo** raw, chỉ **đọc** raw (khai báo là `source` trong `_sources.yml`). Raw do bước EL đổ vào (câu 3).
 
-### Cấu trúc thư mục
+Logistics có thêm **source thứ hai**: bảng `output.orders_v1` của Sales, mở **chỉ đọc** (xem
+[_sources.yml](domains/logistics/dbt/models/staging/_sources.yml) và `profiles.yml`). Logistics không copy data
+của Sales mà đọc thẳng data product của Sales.
+
+### 3. Hai domain xài chung Postgres hay DB riêng? dbt là T, vậy EL ở đâu?
+
+Có **2 loại DB**, đừng gộp lại:
+
+| | Là gì | Chung hay riêng? |
+|---|---|---|
+| **Postgres** | DB của app (OLTP), là **nguồn** | Demo **dùng chung**, vì Olist chỉ có một DB |
+| **DuckDB** | **Warehouse** để phân tích | **Mỗi domain một file**: `sales.duckdb`, `logistics.duckdb` |
+
+Ngoài đời nguồn cũng tách: Sales lấy từ DB của *order service*, Logistics lấy từ DB của *shipping service*.
+
+**EL là [platform/ingest.py](platform/ingest.py).** Gần giống `el_raw.py` ở phase 3, khác 2 điểm:
+- Nó **không tự quyết** copy gì, mà đọc `domains/<domain>/ingest.yml` do domain tự khai báo.
+- Nó **chỉ copy đúng cột đã khai báo**. Logistics không khai báo thông tin khách hàng nên không nhận được.
 
 ```
-phase6_data_mesh/
-├── platform/                         ← PLATFORM TEAM
-│   ├── policies.yml                  luật chung (governance)
-│   ├── ingest.py                     công cụ ingest self-serve
-│   ├── dbt_platform/                 dbt package macro dùng chung
-│   ├── validate_contracts.py         kiểm tra tự động mọi data product
-│   ├── catalog.py                    danh bạ data product
-│   └── mesh_lib.py
-├── domains/
-│   ├── sales/                        ← SALES TEAM
-│   │   ├── ingest.yml                tôi cần bảng/cột nào
-│   │   ├── data_product.yml          ⭐ data contract
-│   │   └── dbt/                      models/staging (nội bộ) + models/output (công khai)
-│   └── logistics/                    ← LOGISTICS TEAM
-│       ├── ingest.yml
-│       ├── data_product.yml
-│       └── dbt/                      profiles.yml attach sales.duckdb READ-ONLY
-├── consumers/exec_report.py          ← người dùng cuối
-└── run_mesh.py                       chạy cả mesh theo thứ tự
+python platform/ingest.py --domain sales
+   = E: đọc Postgres  +  L: ghi vào sales.duckdb/raw.*
 ```
 
-## 4. Chạy
+### 4. Platform nằm ở đâu, ai dùng?
+
+**Platform = bộ đồ nghề dùng chung**, do một **team Platform nhỏ** viết. Domain **tự lấy ra dùng**
+(self-serve), không phải nhờ ai. Giống team DevOps dựng sẵn K8s, CI template, còn team service chỉ viết config.
+
+| Trong `platform/` | Ai dùng | Ngoài đời thường là |
+|---|---|---|
+| `ingest.py` | **Domain**: viết `ingest.yml` rồi gọi | Airbyte, Fivetran |
+| `dbt_platform/` (macro chung) | **Domain**: khai báo trong `packages.yml` | Thư viện nội bộ, như npm package của công ty |
+| `policies.yml` + `validate_contracts.py` | **Platform** chạy tự động, kiểm tra mọi domain | Bước CI: sai luật thì không được merge |
+| `catalog.py` | **Người dùng data** (consumer) | Trang catalog kiểu DataHub: có data product nào, của ai, mới hay cũ |
+
+## Chạy
 
 ```powershell
-.venv\Scripts\python phase6_data_mesh\run_mesh.py     # toàn bộ: ~23 giây
+.venv\Scripts\python phase6_data_mesh\run_mesh.py     # cả mesh, khoảng 23 giây
 ```
 
-Hoặc từng bước, đúng vai từng team:
-```powershell
-# Team Sales
-.venv\Scripts\python phase6_data_mesh\platform\ingest.py --domain sales
-cd phase6_data_mesh\domains\sales\dbt;  ..\..\..\..\.venv\Scripts\dbt deps;  ..\..\..\..\.venv\Scripts\dbt build;  cd ..\..\..\..
-# Team Logistics
-.venv\Scripts\python phase6_data_mesh\platform\ingest.py --domain logistics
-cd phase6_data_mesh\domains\logistics\dbt;  ..\..\..\..\.venv\Scripts\dbt deps;  ..\..\..\..\.venv\Scripts\dbt build;  cd ..\..\..\..
-# Platform team + consumer
-.venv\Scripts\python phase6_data_mesh\platform\validate_contracts.py
-.venv\Scripts\python phase6_data_mesh\platform\catalog.py
-.venv\Scripts\python phase6_data_mesh\consumers\exec_report.py
-```
+Script chạy lần lượt: ingest Sales → dbt Sales → ingest Logistics → dbt Logistics → kiểm tra luật → catalog →
+báo cáo. Bước nào lỗi thì dừng.
 
-## 5. Điều cần quan sát (kết quả thật)
+## Quan sát được gì
 
-**① Cùng kết quả với warehouse trung tâm, nhưng mỗi phần có chủ:**
+**1. Số liệu khớp warehouse trung tâm** (phase 2): doanh thu 13,221,498.11; review đúng hạn 4.29, trễ 2.27.
+Khác ở chỗ giờ mỗi con số **có chủ**: doanh thu thuộc Sales, giao hàng thuộc Logistics.
 
-| Chỉ số | Phase 2 (trung tâm) | Phase 6 (mesh) | Lấy từ data product |
-|---|---|---|---|
-| Doanh thu đơn đã giao | 13,221,498.11 | **13,221,498.11** ✅ | `sales.orders` |
-| Review: đúng hạn / trễ | 4.29 / 2.27 | **4.29 / 2.27** ✅ | `logistics.delivery_performance` (review lấy từ sales) |
+**2. Insight mới:** giao **liên bang** trung bình 15.1 ngày (trễ 8.0%), **nội bang** chỉ 7.9 ngày (trễ 4.5%).
+JOIN 2 data product thấy RJ doanh thu lớn thứ 2 nhưng trễ tới 12.1%.
 
-Insight mới nhờ Logistics có vị trí seller: giao **liên bang** trung bình **15.1 ngày**, trễ 8.0%; **nội bang**
-chỉ **7.9 ngày**, trễ 4.5%. Consumer JOIN 2 data product thấy RJ là bang doanh thu lớn thứ 2 nhưng trễ tới 12.1%.
-
-**② Contract chặn thay đổi phá vỡ ngay tại domain Sales.** Ai đó "chỉ đổi tên một cột":
+**3. Contract chặn thay đổi phá vỡ.** Sales "chỉ đổi tên một cột" `items_value` thì dbt từ chối build:
 ```
 dbt build --vars "{simulate_breaking_change: true}"
 
 This model has an enforced contract that failed.
-| column_name             | definition_type | contract_type | mismatch_reason       |
-| gross_merchandise_value | DOUBLE          |               | missing in contract   |
-| items_value             |                 | DOUBLE        | missing in definition |
-Done. PASS=3 WARN=0 ERROR=1 SKIP=3
+| gross_merchandise_value | DOUBLE |        | missing in contract   |
+| items_value             |        | DOUBLE | missing in definition |
 ```
-→ Bảng `orders_v1` cũ **không bị ghi đè**, nên Logistics không bị gãy. Muốn đổi thật thì phải xuất bản
-`orders_v2` song song, báo cho các consumer (có sẵn trong danh sách `consumers`), và chỉ xoá v1 khi họ đã chuyển xong.
+Bảng `orders_v1` cũ giữ nguyên, Logistics không gãy. Muốn đổi thật thì làm `orders_v2` chạy song song, báo các
+consumer, đợi họ chuyển xong mới xoá v1. Y hệt deprecate REST API.
 
-**③ Governance tự động bắt vi phạm** (giả lập 2 tình huống làm ẩu, `validate_contracts.py` trả exit 1):
+**4. Governance bắt người làm ẩu.** Giả lập Logistics lén đọc bảng nội bộ của Sales, và ai đó thêm cột ngoài
+contract:
 ```
-❌ đọc domain khác qua output port: sales_dp.staging.orders_v1: vi phạm, chỉ được đọc schema 'output'
+❌ sales_dp.staging.orders_v1: vi phạm, chỉ được đọc schema 'output'
 ❌ bảng thật khớp contract (11 cột): thừa ['customer_email']
-❌ 2 vi phạm
 ```
-Khi bình thường, mỗi data product qua 9–12 kiểm tra: đủ trường, đặt tên `_v1`, schema khớp, khoá chính, freshness
-trong SLA, và chỉ đọc domain khác qua output port.
 
-**④ Catalog**: ai cũng tra được data product nào tồn tại, của ai, liên hệ ai, bao nhiêu dòng,
-xuất bản lúc nào, phụ thuộc gì, ai đang dùng.
+## Trung tâm hay Mesh?
 
-**⑤ Lỗi thật gặp khi làm:** đặt staging là `access: private` thì dbt báo lỗi, vì `private` bắt buộc phải khai
-báo *group*. Mức đúng là `protected`: chỉ dùng được trong chính project đó. Đây cũng là cách dbt hỗ trợ ý
-"bảng nội bộ" của Data Mesh.
+- **Công ty nhỏ, một team data** → warehouse trung tâm (phase 1–4). Đơn giản, rẻ.
+- **Công ty lớn, nhiều bộ phận** → Mesh. Mở rộng được, nhưng tốn công dựng platform và giữ kỷ luật contract.
 
-## 6. Trung tâm và Mesh: khi nào dùng cái nào?
+## Áp dụng vào đồ án
 
-| | Warehouse trung tâm (phase 1–4) | Data Mesh (phase 6) |
-|---|---|---|
-| Hợp với | Công ty nhỏ/vừa, ít nguồn, 1 team data | Công ty lớn, nhiều domain, nhiều team data |
-| Ưu | Đơn giản, nhất quán, ít trùng lặp | Mở rộng theo số team, người hiểu nghiệp vụ làm data |
-| Nhược | Team data thành nút cổ chai | Phức tạp: cần platform, governance, kỷ luật contract |
-| Chi phí khởi đầu | Thấp | Cao |
+1. Chia domain **theo nghiệp vụ** (Sales, Logistics), không theo công nghệ.
+2. Mỗi domain **một data product đầu tiên** có contract: owner, schema, SLA, version, ai đang dùng.
+3. Tách **output** (công khai) khỏi **raw/staging** (nội bộ).
+4. Platform tối thiểu: **một tool ingest, một bộ luật kiểm tra tự động, một catalog**.
 
-> Data Mesh **không thay thế** những gì học ở phase 1–4. **Bên trong** mỗi domain vẫn là ELT, star schema,
-> dbt, orchestration. Mesh chỉ thêm **ranh giới sở hữu** và **hợp đồng giữa các domain**.
+File nên đọc: [data_product.yml của Sales](domains/sales/data_product.yml) (contract trông thế nào),
+[policies.yml](platform/policies.yml) (luật chung).
 
-## 7. Gợi ý khi áp dụng vào đồ án
+## Câu hỏi tự kiểm tra
 
-1. **Xác định domain** theo nghiệp vụ, không theo công nghệ (Sales, Logistics, chứ không phải "team Postgres").
-2. **Mỗi domain một data product đầu tiên**, có contract kiểu `data_product.yml`: owner, schema, SLA, version, consumers.
-3. **Output port tách khỏi bảng nội bộ** (schema `output` + dbt `access: public` và `contract: enforced`).
-4. **Platform tối thiểu**: một công cụ ingest chung, một bộ luật chung kiểm tra tự động, một catalog.
-5. Nếu cần thêm: mỗi domain một Dagster code location (phase 4), một catalog thật (DataHub/OpenMetadata),
-   và tách thành nhiều repo, mỗi team một repo.
-
-## 8. Câu hỏi tự kiểm tra
-
-1. Vì sao Logistics không tự ingest bảng `customers` để lấy bang của khách, mà phải đọc qua `sales.orders`?
-   <details><summary>Đáp án</summary>Vì Sales sở hữu và hiểu data khách hàng, kể cả cái bẫy customer_id hay việc gộp theo người thật. Logistics tự ingest thì phải hiểu lại toàn bộ, dễ hiểu sai, và hai bên ra hai con số khác nhau. Dùng data product thì có một nguồn sự thật, có người chịu trách nhiệm.</details>
-2. Sales muốn đổi `items_value` thành `gross_merchandise_value`. Quy trình đúng là gì?
-   <details><summary>Đáp án</summary>Tạo <code>orders_v2</code> (contract mới) chạy song song với <code>orders_v1</code>, báo cho các consumer trong danh sách <code>consumers</code>, đặt hạn ngừng v1, đợi Logistics và exec_report chuyển sang v2, rồi mới xoá v1. Giống hệt cách deprecate một REST API.</details>
-3. Nếu không có `validate_contracts.py`, mesh sẽ "mục" thế nào sau 1 năm với 20 domain?
-   <details><summary>Đáp án</summary>Mỗi domain đặt tên một kiểu, có domain lén đọc bảng nội bộ của nhau (gãy khi bên kia refactor), contract không còn khớp bảng thật, không ai biết data cũ hay mới. Governance phải "computational" (bằng code, tự động), vì luật chỉ nằm trên giấy thì không ai tuân theo.</details>
-4. Data Mesh có phải là "mỗi team tự làm gì thì làm" không?
-   <details><summary>Đáp án</summary>Không. Domain tự do bên trong (model thế nào, dùng SQL gì), nhưng phải tuân luật chung ở ranh giới: contract, versioning, output port, SLA. Tự chủ có kỷ luật, đúng như microservices tự do bên trong nhưng phải giữ API contract.</details>
+1. Vì sao Logistics không tự ingest bảng `customers`, mà đọc qua data product của Sales?
+   <details><summary>Đáp án</summary>Sales mới hiểu data khách hàng (kể cả bẫy customer_id). Logistics tự làm thì dễ hiểu sai, hai bên ra hai con số khác nhau. Dùng data product thì chỉ có một nguồn sự thật, có người chịu trách nhiệm.</details>
+2. Sales muốn đổi tên cột `items_value`. Làm sao cho đúng?
+   <details><summary>Đáp án</summary>Làm <code>orders_v2</code> song song với v1, báo consumer, đợi họ chuyển xong mới xoá v1.</details>
+3. Không có `validate_contracts.py` thì sau 1 năm, 20 domain sẽ ra sao?
+   <details><summary>Đáp án</summary>Mỗi domain đặt tên một kiểu, lén đọc bảng nội bộ của nhau, contract không còn khớp bảng thật. Luật chỉ nằm trên giấy thì không ai theo, nên phải kiểm tra bằng code.</details>
+4. Data Mesh có phải "mỗi team tự làm gì thì làm"?
+   <details><summary>Đáp án</summary>Không. Bên trong tự do, nhưng ở ranh giới (contract, version, output) phải theo luật chung. Giống microservices: code bên trong tuỳ team, API phải giữ đúng.</details>
