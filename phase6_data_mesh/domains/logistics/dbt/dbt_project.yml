@@ -1,0 +1,18 @@
+# Logistics domain dbt project. Owned and run by the Logistics team only.
+name: logistics
+version: "1.0.0"
+profile: logistics
+model-paths: ["models"]
+macro-paths: ["macros"]
+clean-targets: ["target", "logs", "dbt_packages"]
+
+models:
+  logistics:
+    staging:
+      +materialized: view
+      +schema: staging
+      +access: protected
+    output:
+      +materialized: table
+      +schema: output
+      +access: public

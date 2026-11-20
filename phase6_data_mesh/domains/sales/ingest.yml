@@ -1,0 +1,9 @@
+# Domain Sales chỉ lấy những gì thuộc nghiệp vụ BÁN HÀNG: đơn, món, thanh toán, khách, review.
+# (Olist là 1 DB nguyên khối; ở công ty thật, Sales có hệ thống riêng của họ.)
+domain: sales
+tables:
+  customers:      [customer_id, customer_unique_id, customer_zip_code_prefix, customer_city, customer_state]
+  orders:         [order_id, customer_id, order_status, order_purchase_timestamp]
+  order_items:    [order_id, order_item_id, product_id, price, freight_value]
+  order_payments: [order_id, payment_sequential, payment_type, payment_value]
+  order_reviews:  [review_id, order_id, review_score, review_answer_timestamp]

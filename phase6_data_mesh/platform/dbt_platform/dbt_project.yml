@@ -1,0 +1,7 @@
+# Shared dbt package provided by the PLATFORM team.
+# Every domain installs it (packages.yml -> local path) to reuse common macros
+# instead of copy-pasting them.
+name: dbt_platform
+version: "1.0.0"
+config-version: 2
+macro-paths: ["macros"]

@@ -29,8 +29,8 @@ data product" (Data Mesh), **mỗi phase giải quyết nỗi đau của phase t
 | 2 | [Star schema (Dimensional Modeling)](phase2_star_schema/README.md) | Thiết kế warehouse thế nào để query phân tích dễ & nhanh? Fact, dimension, grain? | SQL trên DuckDB | ✅ |
 | 3 | [ELT với dbt](phase3_dbt/README.md) | Vì sao ngành chuyển từ ETL sang ELT? Phân tầng raw/staging/marts, test, lineage, SCD2 | dbt + DuckDB | ✅ |
 | 4 | [Orchestration](phase4_orchestration/README.md) | Ai chạy pipeline mỗi đêm? Phụ thuộc, retry, lịch chạy | Dagster | ✅ |
-| 5 | Data quality & phục vụ | Làm sao để người dùng *tin* data? Freshness, business rule test, báo cáo | dbt tests, Python | ⏳ |
-| 6 | Data Mesh | Chia warehouse tập trung thành các domain sở hữu data product có contract | 2 dbt project, data contract YAML | ⏳ |
+| 5 | Data quality & phục vụ *(tuỳ chọn, tạm bỏ qua)* | Làm sao để người dùng *tin* data? Freshness, business rule test, báo cáo | dbt tests, Python | ⏭️ |
+| 6 | [Data Mesh](phase6_data_mesh/README.md) | Chia warehouse tập trung thành các domain sở hữu data product có contract | 2 dbt project, data contract YAML, platform | ✅ |
 
 Mỗi folder phase có `README.md` gồm: **khái niệm → luồng chạy → lệnh chạy → điều cần quan sát → câu hỏi tự kiểm tra**.
 

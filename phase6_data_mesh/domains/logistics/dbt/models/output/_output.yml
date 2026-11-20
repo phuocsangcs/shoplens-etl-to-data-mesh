@@ -1,0 +1,35 @@
+version: 2
+
+models:
+  - name: delivery_performance_v1
+    description: "Logistics data product. One row per delivered order. See ../../data_product.yml."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: order_id
+        data_type: varchar
+        data_tests: [unique, not_null]
+      - name: seller_state
+        data_type: varchar
+      - name: customer_state
+        data_type: varchar
+      - name: is_interstate
+        data_type: boolean
+      - name: purchased_at
+        data_type: timestamp
+      - name: handed_to_carrier_at
+        data_type: timestamp
+      - name: delivered_at
+        data_type: timestamp
+      - name: estimated_delivery_at
+        data_type: timestamp
+      - name: delivery_days
+        data_type: double
+      - name: is_late
+        data_type: boolean
+        data_tests: [not_null]
+      - name: review_score
+        data_type: integer
+      - name: _published_at
+        data_type: timestamp

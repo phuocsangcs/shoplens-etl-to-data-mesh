@@ -1,0 +1,34 @@
+name: logistics.delivery_performance
+version: 1
+owner:
+  team: Logistics & Fulfillment
+  contact: logistics-data@shoplens.example
+description: >
+  Mỗi dòng = 1 đơn ĐÃ GIAO, góc nhìn VẬN CHUYỂN: giao từ bang nào tới bang nào, mất bao lâu,
+  có trễ hạn không, và khách chấm bao nhiêu sao (lấy từ data product sales.orders).
+output_port:
+  warehouse: warehouse/mesh/logistics.duckdb
+  table: output.delivery_performance_v1
+primary_key: order_id
+input_ports:                     # data product này được dựng từ những gì
+  - own: raw.orders, raw.order_items, raw.sellers
+  - data_product: sales.orders   # dùng qua output port của Sales, KHÔNG đọc bảng nội bộ của họ
+    version: 1
+schema:
+  - {name: order_id,              type: VARCHAR,   description: "Mã đơn"}
+  - {name: seller_state,          type: VARCHAR,   description: "Bang của seller gửi món đầu tiên"}
+  - {name: customer_state,        type: VARCHAR,   description: "Bang khách (từ sales.orders)"}
+  - {name: is_interstate,         type: BOOLEAN,   description: "Giao liên bang?"}
+  - {name: purchased_at,          type: TIMESTAMP, description: "Thời điểm đặt"}
+  - {name: handed_to_carrier_at,  type: TIMESTAMP, description: "Giao cho hãng vận chuyển"}
+  - {name: delivered_at,          type: TIMESTAMP, description: "Khách nhận hàng"}
+  - {name: estimated_delivery_at, type: TIMESTAMP, description: "Ngày hẹn giao"}
+  - {name: delivery_days,         type: DOUBLE,    description: "Số ngày từ lúc đặt tới lúc nhận"}
+  - {name: is_late,               type: BOOLEAN,   description: "Nhận sau ngày hẹn"}
+  - {name: review_score,          type: INTEGER,   description: "Điểm review (từ sales.orders)"}
+  - {name: _published_at,         type: TIMESTAMP, description: "Thời điểm xuất bản"}
+sla:
+  max_age_hours: 24
+  refresh: daily 03:00           # chạy SAU sales (02:00) vì phụ thuộc sales.orders
+consumers:
+  - exec_report

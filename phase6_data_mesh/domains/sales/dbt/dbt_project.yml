@@ -1,0 +1,18 @@
+# Sales domain dbt project. Owned and run by the Sales team only.
+name: sales
+version: "1.0.0"
+profile: sales
+model-paths: ["models"]
+macro-paths: ["macros"]
+clean-targets: ["target", "logs", "dbt_packages"]
+
+models:
+  sales:
+    staging:                 # INTERNAL: implementation detail, may change any time
+      +materialized: view
+      +schema: staging
+      +access: protected     # usable only inside this project, never by other domains
+    output:                  # PUBLIC: the data product (output port), guarded by a contract
+      +materialized: table
+      +schema: output
+      +access: public

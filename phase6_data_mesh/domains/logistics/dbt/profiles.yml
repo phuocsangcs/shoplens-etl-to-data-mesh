@@ -1,0 +1,13 @@
+# Logistics writes ONLY to its own warehouse, and attaches the Sales warehouse READ-ONLY
+# so it can read Sales' published data product (output port).
+logistics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('LOGISTICS_DUCKDB_PATH', '../../../../warehouse/mesh/logistics.duckdb') }}"
+      threads: 4
+      attach:
+        - path: "{{ env_var('SALES_DUCKDB_PATH', '../../../../warehouse/mesh/sales.duckdb') }}"
+          alias: sales_dp
+          read_only: true

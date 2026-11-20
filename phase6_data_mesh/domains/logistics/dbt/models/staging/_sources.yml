@@ -1,0 +1,19 @@
+version: 2
+
+sources:
+  # Logistics' own operational data, ingested by the platform
+  - name: raw
+    schema: raw
+    tables:
+      - name: orders
+      - name: order_items
+      - name: sellers
+
+  # Another domain's data product, read through its OUTPUT PORT only (global policy).
+  # Pinned to version 1 of the contract.
+  - name: sales
+    database: sales_dp      # Sales warehouse, attached read-only in profiles.yml
+    schema: output
+    description: "Data product sales.orders v1 (owner: Sales Analytics)"
+    tables:
+      - name: orders_v1

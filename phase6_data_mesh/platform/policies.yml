@@ -1,0 +1,21 @@
+# Global policies (federated computational governance).
+# Agreed by all domains, enforced AUTOMATICALLY by platform/validate_contracts.py.
+# Domains are free to model data however they want internally, but their PUBLISHED
+# data products must follow these rules.
+required_fields: [name, version, owner, description, output_port, schema, sla]
+
+output_port:
+  schema: output                  # data products live ONLY in schema `output`
+  table_suffix_pattern: "_v{version}"  # table name must end with its version, e.g. orders_v1
+
+columns:
+  required: [_published_at]       # every data product says when it was published
+  allowed_types: [VARCHAR, INTEGER, BIGINT, DOUBLE, BOOLEAN, TIMESTAMP, DATE]
+
+sla:
+  max_age_hours_limit: 48         # no domain may promise freshness worse than 48h
+
+consumption:
+  # A domain may read another domain ONLY through its output port (schema `output`),
+  # never through its raw/staging/internal tables.
+  allowed_foreign_schema: output

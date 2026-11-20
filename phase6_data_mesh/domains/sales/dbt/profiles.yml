@@ -1,0 +1,7 @@
+sales:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('SALES_DUCKDB_PATH', '../../../../warehouse/mesh/sales.duckdb') }}"
+      threads: 4

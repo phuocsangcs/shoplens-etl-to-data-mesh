@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: orders_v1
+    description: "Sales data product. One row per order. See ../../data_product.yml for the full contract."
+    config:
+      contract:
+        enforced: true        # dbt checks column names AND data types at build time
+    columns:
+      - name: order_id
+        data_type: varchar
+        data_tests: [unique, not_null]
+      - name: customer_unique_id
+        data_type: varchar
+        data_tests: [not_null]
+      - name: customer_state
+        data_type: varchar
+      - name: purchased_at
+        data_type: timestamp
+      - name: order_status
+        data_type: varchar
+      - name: item_count
+        data_type: integer
+      - name: items_value
+        data_type: double
+      - name: freight_value
+        data_type: double
+      - name: payment_value
+        data_type: double
+      - name: review_score
+        data_type: integer
+      - name: _published_at
+        data_type: timestamp

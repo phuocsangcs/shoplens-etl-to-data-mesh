@@ -1,0 +1,8 @@
+# Domain Logistics chỉ lấy những gì thuộc nghiệp vụ GIAO HÀNG: các mốc vận chuyển, seller (nơi gửi hàng).
+# KHÔNG lấy thông tin khách hàng hay tiền: những thứ đó Logistics đọc từ data product của Sales.
+domain: logistics
+tables:
+  orders:      [order_id, order_status, order_purchase_timestamp, order_delivered_carrier_date,
+                order_delivered_customer_date, order_estimated_delivery_date]
+  order_items: [order_id, order_item_id, seller_id, shipping_limit_date]
+  sellers:     [seller_id, seller_zip_code_prefix, seller_city, seller_state]

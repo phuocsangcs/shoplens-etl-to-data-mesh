@@ -1,0 +1,33 @@
+# DATA CONTRACT: "giao kèo" công khai của data product, giống OpenAPI spec của một REST API.
+# Domain khác CHỈ được dựa vào những gì ghi ở đây. Muốn đổi theo kiểu phá vỡ (đổi tên/xoá cột,
+# đổi kiểu) thì phải ra version mới (orders_v2) và giữ v1 cho tới khi consumer chuyển xong.
+name: sales.orders
+version: 1
+owner:
+  team: Sales Analytics
+  contact: sales-data@shoplens.example
+description: >
+  Mỗi dòng = 1 đơn hàng, góc nhìn BÁN HÀNG: ai mua (người thật, đã gộp customer_id theo
+  customer_unique_id), ở bang nào, giá trị đơn, đã thanh toán bao nhiêu, điểm review mới nhất.
+output_port:
+  warehouse: warehouse/mesh/sales.duckdb
+  table: output.orders_v1
+primary_key: order_id
+schema:
+  - {name: order_id,           type: VARCHAR,   description: "Mã đơn"}
+  - {name: customer_unique_id, type: VARCHAR,   description: "Người mua thật (KHÔNG phải customer_id theo đơn)"}
+  - {name: customer_state,     type: VARCHAR,   description: "Bang của khách tại thời điểm đặt"}
+  - {name: purchased_at,       type: TIMESTAMP, description: "Thời điểm đặt"}
+  - {name: order_status,       type: VARCHAR,   description: "delivered, shipped, canceled, ..."}
+  - {name: item_count,         type: INTEGER,   description: "Số món"}
+  - {name: items_value,        type: DOUBLE,    description: "Tổng tiền hàng (BRL), chưa gồm phí ship"}
+  - {name: freight_value,      type: DOUBLE,    description: "Tổng phí ship (BRL)"}
+  - {name: payment_value,      type: DOUBLE,    description: "Tổng đã thanh toán (BRL)"}
+  - {name: review_score,       type: INTEGER,   description: "Điểm review mới nhất 1-5, NULL nếu chưa có"}
+  - {name: _published_at,      type: TIMESTAMP, description: "Thời điểm xuất bản"}
+sla:
+  max_age_hours: 24          # cam kết: data không cũ quá 24 giờ
+  refresh: daily 02:00
+consumers:                   # ai đang dùng -> biết phải báo ai khi đổi
+  - logistics.delivery_performance
+  - exec_report
