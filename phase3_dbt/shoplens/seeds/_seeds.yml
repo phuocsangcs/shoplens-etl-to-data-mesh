@@ -3,5 +3,6 @@ version: 2
 seeds:
   - name: category_translation_fixes
     description: >
-      SEED = file CSV nhỏ do con người duy trì, dbt nạp thành bảng.
-      Bổ sung 2 category không có trong bảng dịch gốc của Olist (thay cho dict MISSING_TRANSLATIONS ở phase 1).
+      SEED = small human-maintained CSV that dbt loads as a table.
+      Adds the 2 categories missing from Olist's translation table
+      (replaces the MISSING_TRANSLATIONS dict from phase 1).

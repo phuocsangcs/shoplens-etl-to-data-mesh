@@ -1,4 +1,4 @@
--- GRAIN: 1 đơn (vòng đời đơn hàng). Tổng hợp items/payments lên grain đơn TRƯỚC khi JOIN -> không fan-out.
+-- GRAIN: one order (order lifecycle). Items/payments are aggregated to order grain BEFORE joining -> no fan-out.
 with items as (
     select order_id, count(*) as item_count, sum(price) as items_value, sum(freight_value) as freight_value
     from {{ ref('stg_order_items') }} group by 1

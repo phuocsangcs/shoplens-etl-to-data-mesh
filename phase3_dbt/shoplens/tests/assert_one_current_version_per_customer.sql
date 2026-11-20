@@ -1,4 +1,4 @@
--- SCD2 phải đảm bảo: mỗi người có ĐÚNG 1 phiên bản đang hiệu lực (is_current).
+-- SCD2 must guarantee: each person has EXACTLY one currently valid version (is_current).
 select customer_unique_id, count(*) as current_versions
 from {{ ref('dim_customer') }}
 where is_current

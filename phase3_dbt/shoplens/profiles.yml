@@ -1,5 +1,5 @@
-# Kết nối tới warehouse. Đổi sang Snowflake/BigQuery chỉ cần đổi file này (type, account, ...),
-# SQL của các model gần như giữ nguyên.
+# Warehouse connection. Switching to Snowflake/BigQuery only requires changing this file
+# (type, account, ...); model SQL stays almost the same.
 shoplens:
   target: dev
   outputs:

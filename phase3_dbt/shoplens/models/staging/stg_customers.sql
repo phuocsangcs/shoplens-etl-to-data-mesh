@@ -1,4 +1,4 @@
--- Staging: làm sạch 1-1 với raw.customers. Đổi tên cột cho gọn, chuẩn hoá giá trị. KHÔNG join, KHÔNG gộp.
+-- Staging: clean 1-1 with raw.customers. Rename columns, standardize values. NO joins, NO aggregation.
 select
     customer_id,
     customer_unique_id,

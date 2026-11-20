@@ -1,9 +1,9 @@
 -- =====================================================================
--- fact_order_items. GRAIN: 1 món trong 1 đơn.
+-- fact_order_items. GRAIN: one item in one order.
 --
--- INCREMENTAL MODEL: lần đầu dựng toàn bộ; các lần sau CHỈ xử lý đơn mới hơn đơn mới nhất đã có.
--- Đây chính là "watermark" của phase 1, nhưng dbt lo hết: {{ this }} = chính bảng này,
--- is_incremental() = true khi bảng đã tồn tại. delete+insert theo unique_key -> idempotent.
+-- INCREMENTAL MODEL: first run builds everything; later runs ONLY process orders newer than the newest one already loaded.
+-- This is the phase 1 "watermark", but dbt handles it: {{ this }} = this table,
+-- is_incremental() = true once the table exists. delete+insert on unique_key -> idempotent.
 -- =====================================================================
 {{ config(
     materialized='incremental',
@@ -33,7 +33,7 @@ select
 from orders o
 join {{ ref('stg_order_items') }} oi using (order_id)
 left join {{ ref('stg_customers') }} c using (customer_id)
--- JOIN SCD2: lấy phiên bản địa chỉ ĐANG HIỆU LỰC tại thời điểm mua
+-- SCD2 join: pick the address version that was VALID at purchase time
 left join {{ ref('dim_customer') }} dc
        on dc.customer_unique_id = c.customer_unique_id
       and o.order_purchase_timestamp >= dc.valid_from

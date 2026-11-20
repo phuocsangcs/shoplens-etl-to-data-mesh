@@ -1,10 +1,10 @@
--- ref('...') = tham chiếu model khác. dbt tự suy ra thứ tự chạy (DAG) từ các ref/source này,
--- không cần đánh số 01_, 02_ như phase 2 nữa.
+-- ref('...') = reference another model. dbt infers the run order (DAG) from these ref/source calls,
+-- no more numbering files 01_, 02_ like in phase 2.
 select
     p.product_id,
     coalesce(p.product_category_name, 'unknown')          as category_pt,
     coalesce(t.product_category_name_english, 'unknown')  as category,
-    p.product_name_lenght                                 as name_length,         -- sửa lỗi chính tả nguồn
+    p.product_name_lenght                                 as name_length,         -- fix source typo
     p.product_description_lenght                          as description_length,
     p.product_photos_qty                                  as photos_qty,
     p.product_weight_g                                    as weight_g,

@@ -1,4 +1,4 @@
--- Bảng dịch gốc + 2 bản dịch bổ sung từ seed (CSV do con người duy trì)
+-- Original translation table + 2 extra translations from a seed (human-maintained CSV)
 select product_category_name, product_category_name_english
 from {{ source('olist', 'product_category_name_translation') }}
 

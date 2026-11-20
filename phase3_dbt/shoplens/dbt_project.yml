@@ -1,7 +1,7 @@
-# Cấu hình dbt project. dbt đọc file này để biết: model nằm đâu, mỗi tầng lưu dạng gì, vào schema nào.
+# dbt project config: where models live, how each layer is materialized, and which schema it goes to.
 name: shoplens
 version: "1.0.0"
-profile: shoplens            # tên profile trong profiles.yml (kết nối tới warehouse nào)
+profile: shoplens            # profile name in profiles.yml (which warehouse to connect to)
 
 model-paths: ["models"]
 seed-paths: ["seeds"]
@@ -12,17 +12,17 @@ clean-targets: ["target", "logs"]
 
 models:
   shoplens:
-    # Tầng 1: staging = làm sạch 1-1 với bảng nguồn (thay cho transform.py của phase 1)
+    # Layer 1: staging = clean 1-1 with source tables (replaces transform.py from phase 1)
     staging:
-      +materialized: view    # VIEW: không tốn chỗ, luôn phản ánh raw mới nhất
+      +materialized: view    # VIEW: no storage, always reflects the latest raw data
       +schema: staging
-    # Tầng 2: intermediate = bước trung gian, tái sử dụng
+    # Layer 2: intermediate = reusable in-between steps
     intermediate:
       +materialized: view
       +schema: intermediate
-    # Tầng 3: marts = star schema cho người dùng (thay cho sql/ của phase 2)
+    # Layer 3: marts = star schema for end users (replaces sql/ from phase 2)
     marts:
-      +materialized: table   # TABLE: tính sẵn, query nhanh
+      +materialized: table   # TABLE: precomputed, fast to query
       +schema: marts
 
 seeds:

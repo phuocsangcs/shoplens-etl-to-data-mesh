@@ -1,26 +1,26 @@
 version: 2
 
-# Tài liệu + test cho star schema. Thay cho dict CHECKS trong build_star.py (phase 2).
-# `dbt docs generate` biến các mô tả này thành website tài liệu kèm sơ đồ lineage.
+# Docs + tests for the star schema. Replaces the CHECKS dict in build_star.py (phase 2).
+# `dbt docs generate` turns these descriptions into a docs website with a lineage graph.
 models:
   - name: dim_date
-    description: Lịch 2016-2018, mỗi dòng 1 ngày
+    description: Calendar 2016-2018, one row per day
     columns:
       - name: date_key
         data_tests: [unique, not_null]
 
   - name: dim_customer
     description: >
-      SCD Type 2. Mỗi dòng = 1 phiên bản địa chỉ của 1 người (customer_unique_id).
-      Dùng is_current = true để lấy địa chỉ hiện tại.
+      SCD Type 2. One row = one address version of one person (customer_unique_id).
+      Filter is_current = true to get the current address.
     columns:
       - name: customer_key
-        description: Surrogate key của PHIÊN BẢN (dbt_scd_id)
+        description: Surrogate key of the VERSION (dbt_scd_id)
         data_tests: [unique, not_null]
       - name: valid_from
-        description: Phiên bản bắt đầu hiệu lực
+        description: When this version became valid
       - name: valid_to
-        description: Phiên bản hết hiệu lực (9999-12-31 nếu đang hiệu lực)
+        description: When this version stopped being valid (9999-12-31 if still current)
 
   - name: dim_product
     columns:
@@ -33,7 +33,7 @@ models:
         data_tests: [unique, not_null]
 
   - name: fact_order_items
-    description: "GRAIN: 1 món trong 1 đơn. Incremental theo order_purchase_timestamp."
+    description: "GRAIN: one item in one order. Incremental on order_purchase_timestamp."
     data_tests:
       - unique:
           arguments:
@@ -60,14 +60,14 @@ models:
                 field: date_key
 
   - name: fact_payments
-    description: "GRAIN: 1 lần thanh toán"
+    description: "GRAIN: one payment"
     data_tests:
       - unique:
           arguments:
             column_name: "order_id || '-' || payment_sequential"
 
   - name: fact_orders
-    description: "GRAIN: 1 đơn hàng, theo dõi vòng đời đơn (mua → duyệt → giao)"
+    description: "GRAIN: one order, tracking its lifecycle (purchase -> approval -> delivery)"
     columns:
       - name: order_id
         data_tests: [unique, not_null]

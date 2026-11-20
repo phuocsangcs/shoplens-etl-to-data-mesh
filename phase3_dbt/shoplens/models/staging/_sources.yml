@@ -1,15 +1,15 @@
 version: 2
 
-# SOURCE = khai báo bảng thô do bước EL nạp vào (schema raw).
-# Model dùng {{ source('olist', 'orders') }} thay vì viết cứng raw.orders
-# -> dbt biết được lineage: dữ liệu đi từ đâu tới đâu.
+# SOURCE = declares raw tables loaded by the EL step (schema raw).
+# Models use {{ source('olist', 'orders') }} instead of hard-coding raw.orders,
+# so dbt knows the lineage: where data comes from and where it goes.
 sources:
   - name: olist
     schema: raw
-    description: Bản copy nguyên trạng DB production của Olist (Postgres), nạp bởi el_raw.py
+    description: As-is copy of the Olist production DB (Postgres), loaded by el_raw.py
     tables:
       - name: customers
-        description: Mỗi dòng = 1 customer_id (sinh mới cho MỖI ĐƠN, không phải 1 người)
+        description: One row per customer_id (a NEW id for EVERY order, not one per person)
       - name: sellers
       - name: products
       - name: product_category_name_translation
@@ -17,6 +17,6 @@ sources:
       - name: order_items
       - name: order_payments
       - name: order_reviews
-        description: review_id KHÔNG unique; 1 đơn có thể có nhiều review
+        description: review_id is NOT unique; one order can have several reviews
       - name: geolocation
-        description: Nhiều dòng / 1 zip, tên thành phố viết không thống nhất
+        description: Many rows per zip code, inconsistent city spelling

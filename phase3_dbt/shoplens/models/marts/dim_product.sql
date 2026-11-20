@@ -1,4 +1,4 @@
--- Surrogate key bằng HASH (md5) của natural key: cùng product_id -> luôn cùng key, dù dựng lại bao nhiêu lần.
+-- Surrogate key = HASH (md5) of the natural key: same product_id -> always the same key, however often we rebuild.
 select
     md5(product_id)  as product_key,
     product_id,

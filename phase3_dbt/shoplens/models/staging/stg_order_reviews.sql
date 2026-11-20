@@ -1,5 +1,5 @@
--- Quy tắc nghiệp vụ: mỗi đơn chỉ giữ review MỚI NHẤT -> order_id thành khoá duy nhất.
--- (Ở phase 1, đổi quy tắc này phải extract lại. Ở ELT: sửa 1 dòng SQL, chạy lại dbt, raw vẫn còn nguyên.)
+-- Business rule: keep only the LATEST review per order -> order_id becomes a unique key.
+-- (In phase 1, changing this rule meant re-extracting. With ELT: edit one line, rerun dbt; raw is still intact.)
 select
     review_id,
     order_id,

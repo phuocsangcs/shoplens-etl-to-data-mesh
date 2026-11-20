@@ -1,4 +1,4 @@
--- GRAIN: 1 lần thanh toán
+-- GRAIN: one payment
 select
     p.order_id,
     p.payment_sequential,

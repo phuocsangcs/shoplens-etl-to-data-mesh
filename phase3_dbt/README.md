@@ -79,11 +79,11 @@ shoplens/
 
 ## 3. Chạy
 
-> ⚠️ **Windows:** dbt đọc file bằng bảng mã cp1252, gặp tiếng Việt trong comment là lỗi.
-> Luôn đặt `PYTHONUTF8=1` trước (Git Bash: `export PYTHONUTF8=1`, PowerShell: `$env:PYTHONUTF8=1`).
+> ℹ️ Mọi file trong `shoplens/` chỉ dùng tiếng Anh (ASCII). Trên Windows, dbt đọc `dbt_project.yml` bằng bảng mã
+> cp1252, gặp chữ có dấu là lỗi `'charmap' codec can't decode`. Nếu sau này thêm tiếng Việt vào đó, phải đặt
+> `$env:PYTHONUTF8=1` (PowerShell) hoặc `export PYTHONUTF8=1` (Git Bash) trước khi chạy dbt.
 
 ```bash
-export PYTHONUTF8=1
 .venv/Scripts/python phase3_dbt/el_raw.py          # EL: Postgres → raw (~2 giây)
 cd phase3_dbt/shoplens
 ../../.venv/Scripts/dbt build                      # seed + models + snapshot + test, đúng thứ tự

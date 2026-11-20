@@ -1,17 +1,17 @@
 version: 2
 
-# SNAPSHOT = cách dbt làm SCD Type 2 (giữ lịch sử thay đổi).
-# Mỗi lần chạy, dbt so sánh trạng thái hiện tại với lần chụp trước:
-#   - không đổi            -> bỏ qua
-#   - city/state/zip đổi   -> "đóng" dòng cũ (điền dbt_valid_to) + thêm dòng mới (dbt_valid_to = NULL)
-# Kết quả: một người có thể có NHIỀU dòng, mỗi dòng là một "phiên bản" địa chỉ kèm khoảng thời gian hiệu lực.
+# SNAPSHOT = dbt's way of doing SCD Type 2 (keeping change history).
+# On every run, dbt compares the current state with the previous capture:
+#   - unchanged                -> skip
+#   - city/state/zip changed   -> "close" the old row (fill dbt_valid_to) + insert a new row (dbt_valid_to = NULL)
+# Result: one person can have SEVERAL rows, each a "version" of the address with its validity period.
 #
-# strategy: check     -> so sánh giá trị các cột (dùng khi nguồn KHÔNG có cột updated_at, như Olist)
-# strategy: timestamp -> dựa vào cột updated_at (nhanh hơn, dùng khi nguồn có)
+# strategy: check     -> compare column values (use when the source has NO updated_at, like Olist)
+# strategy: timestamp -> rely on an updated_at column (faster, use when the source has one)
 snapshots:
   - name: snap_customer_address
     relation: ref('int_customer_latest_address')
-    description: Lịch sử địa chỉ của từng người (SCD Type 2)
+    description: Address history per person (SCD Type 2)
     config:
       schema: snapshots
       unique_key: customer_unique_id

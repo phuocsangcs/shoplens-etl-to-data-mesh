@@ -1,7 +1,7 @@
 {#
-  MACRO = "hàm" SQL tái sử dụng (viết bằng Jinja). Thay cho hàm normalize_city() trong transform.py phase 1.
-  'São Paulo ' -> 'sao paulo'  |  'sa£o paulo' -> 'sao paulo'
-  Dùng: {{ normalize_city('customer_city') }}
+  MACRO = reusable SQL "function" (written in Jinja). Replaces normalize_city() in phase 1 transform.py.
+  Strips accents, lowercases, keeps only letters/digits/space/'/-, collapses whitespace.
+  Usage: {{ normalize_city('customer_city') }}
 #}
 {% macro normalize_city(column) -%}
     nullif(trim(regexp_replace(

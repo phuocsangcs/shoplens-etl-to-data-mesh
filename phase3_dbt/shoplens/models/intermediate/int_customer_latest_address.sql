@@ -1,5 +1,6 @@
--- Mỗi NGƯỜI (customer_unique_id) 1 dòng, với địa chỉ HIỆN TẠI (lấy từ đơn gần nhất).
--- Đây là "trạng thái hiện tại" mà snapshot sẽ chụp lại mỗi lần chạy để phát hiện thay đổi.
+-- One row per PERSON (customer_unique_id) with their CURRENT address (taken from the latest order).
+-- This is the "current state" the snapshot captures on every run to detect changes.
+-- customer_id is the tie-breaker: without it, two orders in the same second make the result non-deterministic.
 select
     c.customer_unique_id,
     c.city,

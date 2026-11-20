@@ -1,4 +1,4 @@
--- 1 triệu dòng -> mỗi zip 1 dòng: toạ độ trung vị, tên thành phố phổ biến nhất (sau chuẩn hoá)
+-- 1 million rows -> one row per zip: median coordinates, most common city name (after normalization)
 select
     lpad(geolocation_zip_code_prefix, 5, '0')     as zip_code_prefix,
     median(geolocation_lat)                       as lat,

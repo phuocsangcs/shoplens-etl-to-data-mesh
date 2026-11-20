@@ -1,15 +1,15 @@
 version: 2
 
-# Mô tả + TEST cho tầng staging. `dbt build` sẽ chạy test ngay sau khi dựng model;
-# test fail -> các model phía sau bị dừng, data hỏng không lan xuống marts.
+# Docs + TESTS for the staging layer. `dbt build` runs tests right after building each model;
+# a failing test stops downstream models, so bad data never reaches the marts.
 models:
   - name: stg_customers
-    description: Mỗi dòng = 1 customer_id (theo đơn). Thành phố đã chuẩn hoá.
+    description: One row per customer_id (per order). City names normalized.
     columns:
       - name: customer_id
         data_tests: [unique, not_null]
       - name: customer_unique_id
-        description: ID thật của một người
+        description: The real ID of a person
         data_tests: [not_null]
 
   - name: stg_sellers
@@ -22,11 +22,11 @@ models:
       - name: product_id
         data_tests: [unique, not_null]
       - name: category
-        description: Tên tiếng Anh; 'unknown' nếu nguồn NULL
+        description: English name; 'unknown' when the source is NULL
         data_tests: [not_null]
 
   - name: stg_geolocation
-    description: Mỗi dòng = 1 zip code
+    description: One row per zip code
     columns:
       - name: zip_code_prefix
         data_tests: [unique, not_null]
@@ -59,7 +59,7 @@ models:
                 values: [credit_card, boleto, voucher, debit_card]
 
   - name: stg_order_reviews
-    description: 1 review mới nhất / đơn
+    description: Latest review per order
     columns:
       - name: order_id
         data_tests: [unique, not_null]
