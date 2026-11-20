@@ -40,6 +40,52 @@ Fact nằm giữa, các dim xếp quanh nên trông như **ngôi sao**:
 | **Conformed dimension** | Một dim dùng chung cho nhiều fact, nhờ vậy so sánh chéo được | `dim_customer` dùng cho cả 3 fact |
 | **Phi chuẩn hoá** | Cố tình lặp dữ liệu (tên category nằm luôn trong dim_product) để bớt JOIN | Ngược với 3NF ở môn CSDL! |
 
+### Vì sao không thiết kế star schema ngay trong DB của app?
+
+Vì **DB của app và warehouse làm hai việc ngược nhau**, giống **CQRS** bên SE: tách *model để ghi* khỏi *model để đọc*.
+
+| | DB của app (3NF) | Warehouse (star) |
+|---|---|---|
+| Việc chính | **Ghi**: đặt hàng, đổi địa chỉ, huỷ đơn | **Đọc**: tính tổng, so sánh, vẽ biểu đồ |
+| Ưu tiên | Ghi nhanh, không sai lệch | Đọc dễ, đọc nhanh |
+
+- Star schema **cố tình lặp data** (tên category nằm trên 32k dòng sản phẩm). Đem làm DB cho app thì đổi tên một category phải UPDATE hàng nghìn dòng, sót một dòng là lệch (*update anomaly*).
+- Lúc viết app **chưa ai biết** sau này sẽ hỏi gì ("Black Friday", "giao trễ thì review thế nào"…).
+- Warehouse gom **nhiều nguồn** (DB đơn hàng, kho, CRM, quảng cáo…), không DB app nào chứa hết.
+
+👉 Không ai "làm sai từ đầu" cả. **Cùng một data, hai hình dạng cho hai mục đích**, và pipeline là cầu nối giữa hai bên.
+
+### Data nằm ở đâu? `clean` và `mart` là gì?
+
+Toàn bộ "sắp xếp lại" diễn ra **trong DuckDB**: SQL đọc bảng cũ rồi tạo bảng mới. Postgres không bị đụng tới.
+
+```
+Postgres (app)          DuckDB (warehouse)
+──────────────          ─────────────────────────────────────────────
+orders          ─P1─▶   clean.orders        ─P2─▶   mart.fact_orders
+order_items             clean.order_items           mart.fact_order_items
+customers               clean.customers             mart.dim_customer
+products                clean.products              mart.dim_product
+...                     ...                         mart.dim_date ...
+
+3NF, data bẩn           3NF, data SẠCH              STAR, dễ phân tích
+                        (Phase 1: dọn dẹp)          (Phase 2: sắp xếp lại)
+```
+
+- **Phase 1** copy sang DuckDB và dọn dẹp, nhưng *giữ nguyên hình dạng bảng* như app.
+- **Phase 2** đọc `clean` rồi *tạo bảng mới theo hình ngôi sao* trong `mart`.
+
+**Mart** (data mart) là tầng cuối của warehouse, nơi data đã bày sẵn để người dùng lấy ra xài ngay.
+Giống siêu thị: `clean` là **kho phía sau** (hàng sạch nhưng còn nguyên thùng), `mart` là **quầy kệ phía trước**
+(bày theo cách người mua tìm). Analyst và dashboard chỉ đụng vào `mart`. Công ty lớn thường có nhiều mart
+cho nhiều bộ phận (mart bán hàng, mart vận chuyển…).
+
+> ⚠️ Chữ **"schema"** có hai nghĩa: **schema trong DuckDB** = *thư mục* chứa bảng (`clean`, `mart`, `etl_meta`);
+> **star schema** = *kiểu thiết kế* bảng (fact ở giữa, dim xung quanh).
+>
+> Cách chia tầng này không riêng DuckDB: trên Snowflake/BigQuery cũng vậy, chỉ khác tên
+> (raw / staging / marts, hoặc bronze / silver / gold). Phase 3 làm đúng kiểu đó bằng dbt.
+
 ### Quy trình 4 bước của Kimball (đã áp dụng ở đây)
 1. **Chọn quy trình nghiệp vụ**: bán hàng, thanh toán, giao hàng
 2. **Khai báo grain**: 1 món / 1 lần thanh toán / 1 đơn
