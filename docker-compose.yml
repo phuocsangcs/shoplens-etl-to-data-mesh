@@ -1,0 +1,22 @@
+# Postgres này đóng vai "database production của shop" (hệ thống OLTP).
+# Trong thực tế bạn KHÔNG được phép chạy query phân tích nặng lên DB này,
+# vì nó đang phục vụ khách hàng -> đó là lý do phải copy data sang warehouse.
+services:
+  shop-db:
+    image: postgres:16-alpine
+    container_name: shoplens-source-db
+    environment:
+      POSTGRES_USER: shop
+      POSTGRES_PASSWORD: shop
+      POSTGRES_DB: shop
+    ports:
+      - "5440:5432"   # 5432 trên máy bạn đang bị app khác dùng
+    volumes:
+      - shop-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shop"]
+      interval: 3s
+      retries: 10
+
+volumes:
+  shop-data:

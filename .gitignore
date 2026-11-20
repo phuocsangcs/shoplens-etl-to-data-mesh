@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.duckdb
+*.duckdb.wal
+target/
+logs/
+dbt_packages/
+.dagster_home/
+data/raw/

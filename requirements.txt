@@ -1,0 +1,8 @@
+# Thư viện được thêm dần theo từng phase.
+
+# --- Phase 0: kết nối Postgres (DB nguồn OLTP) ---
+psycopg[binary]>=3.2
+
+# --- Phase 1: ETL bằng Python -> DuckDB ---
+pandas>=2.2
+duckdb>=1.1
