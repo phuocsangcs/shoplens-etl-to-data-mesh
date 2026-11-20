@@ -34,6 +34,27 @@ data product" (Data Mesh), **mỗi phase giải quyết nỗi đau của phase t
 
 Mỗi folder phase có `README.md` gồm: **khái niệm → luồng chạy → lệnh chạy → điều cần quan sát → câu hỏi tự kiểm tra**.
 
+## Tổng kết
+
+**Một câu:** phase 1–4 dạy **cách làm** data phân tích (kỹ thuật). Data Mesh dạy **ai làm và chia ranh giới
+thế nào** (tổ chức). Bên trong mỗi domain vẫn là toàn bộ kỹ thuật của phase 1–4.
+
+| Phase | Vấn đề | Lời giải | Ý cần nhớ |
+|---|---|---|---|
+| 0 | Phân tích thẳng trên DB của app: chậm, bẩn, dễ hiểu sai | Tách chỗ phân tích riêng | OLTP ≠ OLAP |
+| 1 | Cần copy và làm sạch data | ETL bằng Python | Incremental, idempotent |
+| 2 | Bảng sạch nhưng query vẫn khó | Star schema | Fact + dimension, grain |
+| 3 | Code ETL tự viết khó bảo trì, khó test | ELT với dbt | Test, lineage, SCD2 |
+| 4 | Ai chạy mỗi đêm, lỗi thì sao? | Dagster | Phụ thuộc, retry, lịch |
+| 6 | Một team data thành nút cổ chai | Data Mesh | Domain sở hữu, giao tiếp qua contract |
+
+**Data Mesh là gì, nói cho đúng:**
+- Là **paradigm** (4 nguyên tắc), không phải tool. Cùng loại với microservices hay DDD.
+- Dành cho **analytical data**. Phía operational đã có microservices: mỗi service một DB, giao tiếp qua API.
+  Data Mesh chính là **mang tư tưởng microservices sang phía phân tích**.
+- Trong một domain, team sở hữu **cả hai**: service (Postgres) ──EL/CDC──▶ data product (warehouse).
+- **Không thay thế** warehouse, ELT hay star schema. Chỉ thêm **ranh giới sở hữu và contract** lên trên.
+
 ## Giải nghĩa nhanh vài thuật ngữ
 
 - **OLTP (Online Transaction Processing)**: DB của app, ghi/đọc từng dòng (Postgres, MySQL). **OLAP (Online Analytical Processing)**: DB phân tích, quét hàng triệu dòng.
