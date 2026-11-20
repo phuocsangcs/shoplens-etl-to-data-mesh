@@ -28,7 +28,7 @@ data product" (Data Mesh), **mỗi phase giải quyết nỗi đau của phase t
 | 1 | [ETL bằng Python](phase1_python_etl/README.md) | Extract, Transform, Load thực chất là gì? Idempotent, incremental là gì? | Python, pandas, DuckDB | ✅ |
 | 2 | [Star schema (Dimensional Modeling)](phase2_star_schema/README.md) | Thiết kế warehouse thế nào để query phân tích dễ & nhanh? Fact, dimension, grain? | SQL trên DuckDB | ✅ |
 | 3 | [ELT với dbt](phase3_dbt/README.md) | Vì sao ngành chuyển từ ETL sang ELT? Phân tầng raw/staging/marts, test, lineage, SCD2 | dbt + DuckDB | ✅ |
-| 4 | Orchestration | Ai chạy pipeline mỗi đêm? Phụ thuộc, retry, lịch chạy | Dagster | ⏳ |
+| 4 | [Orchestration](phase4_orchestration/README.md) | Ai chạy pipeline mỗi đêm? Phụ thuộc, retry, lịch chạy | Dagster | ✅ |
 | 5 | Data quality & phục vụ | Làm sao để người dùng *tin* data? Freshness, business rule test, báo cáo | dbt tests, Python | ⏳ |
 | 6 | Data Mesh | Chia warehouse tập trung thành các domain sở hữu data product có contract | 2 dbt project, data contract YAML | ⏳ |
 

@@ -10,3 +10,8 @@ duckdb>=1.1
 # --- Phase 3: ELT với dbt ---
 dbt-core>=1.9
 dbt-duckdb>=1.9
+
+# --- Phase 4: Orchestration ---
+dagster>=1.9
+dagster-webserver>=1.9
+dagster-dbt>=0.25

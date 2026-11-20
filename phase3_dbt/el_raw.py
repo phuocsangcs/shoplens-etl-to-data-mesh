@@ -25,24 +25,33 @@ TABLES = ["customers", "sellers", "products", "product_category_name_translation
           "orders", "order_items", "order_payments", "order_reviews", "geolocation"]
 
 
-def main():
+def extract_load(tables: list[str] = TABLES, log=print) -> dict[str, int]:
+    """Copy các bảng nguồn vào raw. Trả về {tên bảng: số dòng}. Phase 4 (Dagster) gọi lại hàm này."""
     WAREHOUSE_PATH.parent.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(str(WAREHOUSE_PATH))
-    con.execute("INSTALL postgres; LOAD postgres;")
-    con.execute(f"ATTACH '{SOURCE_DSN}' AS src (TYPE postgres, READ_ONLY)")  # chỉ đọc nguồn
-    con.execute("CREATE SCHEMA IF NOT EXISTS raw")
+    counts = {}
+    try:
+        con.execute("INSTALL postgres; LOAD postgres;")
+        con.execute(f"ATTACH '{SOURCE_DSN}' AS src (TYPE postgres, READ_ONLY)")  # chỉ đọc nguồn
+        con.execute("CREATE SCHEMA IF NOT EXISTS raw")
 
-    print(f"EL: Postgres → {WAREHOUSE_PATH.name} (schema raw)")
-    for t in TABLES:
-        t0 = time.perf_counter()
-        # Copy y nguyên + 1 cột metadata: lúc nào dòng này được nạp (phục vụ kiểm tra freshness)
-        con.execute(f"""
-            CREATE OR REPLACE TABLE raw.{t} AS
-            SELECT *, now() AS _loaded_at FROM src.public.{t}
-        """)
-        n = con.execute(f"SELECT COUNT(*) FROM raw.{t}").fetchone()[0]
-        print(f"  raw.{t:<36} {n:>9,} dòng  ({time.perf_counter() - t0:.1f}s)")
-    con.close()
+        log(f"EL: Postgres → {WAREHOUSE_PATH.name} (schema raw)")
+        for t in tables:
+            t0 = time.perf_counter()
+            # Copy y nguyên + 1 cột metadata: lúc nào dòng này được nạp (phục vụ kiểm tra freshness)
+            con.execute(f"""
+                CREATE OR REPLACE TABLE raw.{t} AS
+                SELECT *, now() AS _loaded_at FROM src.public.{t}
+            """)
+            counts[t] = con.execute(f"SELECT COUNT(*) FROM raw.{t}").fetchone()[0]
+            log(f"  raw.{t:<36} {counts[t]:>9,} dòng  ({time.perf_counter() - t0:.1f}s)")
+    finally:
+        con.close()
+    return counts
+
+
+def main():
+    extract_load()
 
 
 if __name__ == "__main__":
