@@ -1,0 +1,79 @@
+version: 2
+
+# Tài liệu + test cho star schema. Thay cho dict CHECKS trong build_star.py (phase 2).
+# `dbt docs generate` biến các mô tả này thành website tài liệu kèm sơ đồ lineage.
+models:
+  - name: dim_date
+    description: Lịch 2016-2018, mỗi dòng 1 ngày
+    columns:
+      - name: date_key
+        data_tests: [unique, not_null]
+
+  - name: dim_customer
+    description: >
+      SCD Type 2. Mỗi dòng = 1 phiên bản địa chỉ của 1 người (customer_unique_id).
+      Dùng is_current = true để lấy địa chỉ hiện tại.
+    columns:
+      - name: customer_key
+        description: Surrogate key của PHIÊN BẢN (dbt_scd_id)
+        data_tests: [unique, not_null]
+      - name: valid_from
+        description: Phiên bản bắt đầu hiệu lực
+      - name: valid_to
+        description: Phiên bản hết hiệu lực (9999-12-31 nếu đang hiệu lực)
+
+  - name: dim_product
+    columns:
+      - name: product_key
+        data_tests: [unique, not_null]
+
+  - name: dim_seller
+    columns:
+      - name: seller_key
+        data_tests: [unique, not_null]
+
+  - name: fact_order_items
+    description: "GRAIN: 1 món trong 1 đơn. Incremental theo order_purchase_timestamp."
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "order_id || '-' || order_item_id"
+    columns:
+      - name: customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+      - name: product_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product_key
+      - name: order_date_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_key
+
+  - name: fact_payments
+    description: "GRAIN: 1 lần thanh toán"
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "order_id || '-' || payment_sequential"
+
+  - name: fact_orders
+    description: "GRAIN: 1 đơn hàng, theo dõi vòng đời đơn (mua → duyệt → giao)"
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: customer_key
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key

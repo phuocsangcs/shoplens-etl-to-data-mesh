@@ -1,0 +1,70 @@
+version: 2
+
+# Mô tả + TEST cho tầng staging. `dbt build` sẽ chạy test ngay sau khi dựng model;
+# test fail -> các model phía sau bị dừng, data hỏng không lan xuống marts.
+models:
+  - name: stg_customers
+    description: Mỗi dòng = 1 customer_id (theo đơn). Thành phố đã chuẩn hoá.
+    columns:
+      - name: customer_id
+        data_tests: [unique, not_null]
+      - name: customer_unique_id
+        description: ID thật của một người
+        data_tests: [not_null]
+
+  - name: stg_sellers
+    columns:
+      - name: seller_id
+        data_tests: [unique, not_null]
+
+  - name: stg_products
+    columns:
+      - name: product_id
+        data_tests: [unique, not_null]
+      - name: category
+        description: Tên tiếng Anh; 'unknown' nếu nguồn NULL
+        data_tests: [not_null]
+
+  - name: stg_geolocation
+    description: Mỗi dòng = 1 zip code
+    columns:
+      - name: zip_code_prefix
+        data_tests: [unique, not_null]
+
+  - name: stg_orders
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: order_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [delivered, shipped, canceled, unavailable, invoiced, processing, created, approved]
+
+  - name: stg_order_items
+    columns:
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+
+  - name: stg_order_payments
+    columns:
+      - name: payment_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [credit_card, boleto, voucher, debit_card]
+
+  - name: stg_order_reviews
+    description: 1 review mới nhất / đơn
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: review_score
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]

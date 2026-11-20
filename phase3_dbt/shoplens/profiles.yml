@@ -1,0 +1,9 @@
+# Kết nối tới warehouse. Đổi sang Snowflake/BigQuery chỉ cần đổi file này (type, account, ...),
+# SQL của các model gần như giữ nguyên.
+shoplens:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DBT_DUCKDB_PATH', '../../warehouse/shoplens_elt.duckdb') }}"
+      threads: 4
